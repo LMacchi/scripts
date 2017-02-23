@@ -1,0 +1,7 @@
+saz-ssh
+blah-bleh
+puppetlabs-concat
+wdijkerman-zabbix
+puppetlabs-apache
+puppetlabs-mysql
+lalala-lelele
