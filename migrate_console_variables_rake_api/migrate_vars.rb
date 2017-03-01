@@ -19,6 +19,7 @@ def getVarsPerNode(node)
     i = line.split('=')
     var = i[0].chomp
     value = i[1].chomp
+    puts "For node #{node} variable #{var} is #{value}"
     $variables[var] = value
   end
   return $variables
@@ -41,31 +42,35 @@ def getNodesPerVar(target)
 end
 
 nodes_list = ARGV[0]
+nodes_pp = 'nodes.pp'
 $fullvars = Hash.new()
 
 # Read nodes_list from disk and call the rake API
 # for each node
-file = File.open(nodes_list, "r") do |fh|
+file_in = File.open(nodes_list, "r") do |fh|
   fh.each_line do |node|
   node.chomp!
   $fullvars[node] = getVarsPerNode node
   end
 end
 
+# Open output file
+file_out = File.open(nodes_pp, 'w') do |fh|
+
 # We're interested in site and role, so let's process
 # only the nodes with those values
-$sites = getNodesPerVar('site')
-$roles = getNodesPerVar('role')
+  $sites = getNodesPerVar('site')
+  $roles = getNodesPerVar('role')
 
 # Create a node_group definition per site with a rule
 # pinning nodes to it
-$sites.each do |site,nodes|
-  $rule = "['or'"
-  nodes.each do |node|
-    $rule += ", ['=', 'name', '#{node}']"
-  end
-  $rule += "]"
-  $nd = %Q(
+  $sites.each do |site,nodes|
+    $rule = "['or'"
+    nodes.each do |node|
+      $rule += ", ['=', 'name', '#{node}']"
+    end
+    $rule += "]"
+    $nd = %Q(
 node_group { '#{site}':
   ensure => present,
   environment => 'production',
@@ -75,18 +80,18 @@ node_group { '#{site}':
   variables => {'site' => '#{site}'},
 }
 )
-  puts $nd
-end
+    fh.puts $nd
+  end
 
 # Create a node_group definition per role with a rule
 # # pinning nodes to it
-$roles.each do |role,nodes|
-  $rule = "['or'"
-  nodes.each do |node|
-    $rule += ", ['=', 'name', '#{node}']"
-  end
-  $rule += "]"
-  $nd = %Q(
+  $roles.each do |role,nodes|
+    $rule = "['or'"
+    nodes.each do |node|
+      $rule += ", ['=', 'name', '#{node}']"
+    end
+    $rule += "]"
+    $nd = %Q(
 node_group { '#{role}':
   ensure => present,
   environment => 'production',
@@ -96,7 +101,8 @@ node_group { '#{role}':
   variables => {'role' => '#{role}'},
 }
 )
-  puts $nd
+    fh.puts $nd
+  end
 end
 
 exit 0
