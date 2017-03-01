@@ -57,13 +57,13 @@ end
 # Open output file
 file_out = File.open(nodes_pp, 'w') do |fh|
 
-# We're interested in site and role, so let's process
-# only the nodes with those values
+  # We're interested in site and role, so let's process
+  # only the nodes with those values
   $sites = getNodesPerVar('site')
   $roles = getNodesPerVar('role')
 
-# Create a node_group definition per site with a rule
-# pinning nodes to it
+  # Create a node_group definition per site with a rule
+  # pinning nodes to it
   $sites.each do |site,nodes|
     $rule = "['or'"
     nodes.each do |node|
@@ -83,8 +83,8 @@ node_group { '#{site}':
     fh.puts $nd
   end
 
-# Create a node_group definition per role with a rule
-# pinning nodes to it
+  # Create a node_group definition per role with a rule
+  # pinning nodes to it
   $roles.each do |role,nodes|
     $rule = "['or'"
     nodes.each do |node|
