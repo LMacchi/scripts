@@ -1,7 +1,7 @@
 #!/opt/puppet/bin/ruby
-#Script that retrieves variables from a PE 3.2 console
-#and manipulates them to get node_groups definitions
-#for a PE 3.8/4+ console
+# Script that retrieves variables from a PE 3.2 console
+# and manipulates them to get node_groups definitions
+# for a PE 3.8/4+ console
 
 if ARGV.empty?
   puts "USAGE: #{$0} /path/to/nodes/list.txt"
@@ -79,7 +79,7 @@ node_group { '#{site}':
 end
 
 # Create a node_group definition per role with a rule
-# # pinning nodes to it
+# pinning nodes to it
 $roles.each do |role,nodes|
   $rule = "['or'"
   nodes.each do |node|
