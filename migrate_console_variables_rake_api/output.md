@@ -1,6 +1,7 @@
 ## On 3.2 Master
 
-```[root@master ~]# ./script.rb nodes.txt | tee nodes.pp
+```
+[root@master ~]# ./script.rb nodes.txt | tee nodes.pp
 
 node_group { 'dfw':
   ensure => present,
@@ -27,11 +28,13 @@ node_group { 'vcs':
   parent => 'default',
   rule => ['or', ['=', 'name', 'git.puppetlabs.vm']],
   variables => {'role' => 'vcs'},
-}```
+}
+```
 
 ## On 3.8 master
 
-```[root@master ~]# puppet apply nodes.pp
+```
+[root@master ~]# puppet apply nodes.pp
 Notice: Compiled catalog for master.puppetlabs.vm in environment production in 0.08 seconds
 Notice: /Stage[main]/Main/Node_group[dfw]/ensure: created
 Notice: /Stage[main]/Main/Node_group[puppetmaster]/ensure: created
@@ -67,4 +70,5 @@ node_group { 'vcs':
   rule                 => ['or', ['=', 'name', 'git.puppetlabs.vm']],
   variables            => {'role' => 'vcs'},
 }
-[root@master ~]#```
+[root@master ~]#
+```
