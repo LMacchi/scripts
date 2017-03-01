@@ -32,7 +32,8 @@ file = File.open(mod_list, "r") do |fh|
 
       full_name = parsed["slug"]
       version = parsed["current_release"]["version"]
-
+      # API returns author-module but r10k needs author/module
+      full_name.gsub!(/-/, '/')
       puts "mod \'#{full_name}\', \'#{version}\'"
     else
       $not_found.push(mod)
