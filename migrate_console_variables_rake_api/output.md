@@ -7,6 +7,7 @@ For node git.puppetlabs.vm variable role is vcs
 For node master.puppetlabs.vm variable site is dfw
 For node master.puppetlabs.vm variable role is puppetmaster
 [root@master ~]# cat nodes.pp
+
 node_group { 'dfw':
   ensure => present,
   environment => 'production',
