@@ -3,20 +3,11 @@
 require "net/https"
 require "uri"
 require "json"
-$not_found = Array.new()
-$decom = Array.new()
-$deps = Array.new()
-$mods = Hash.new()
-mod_list = ARGV[0]
-puppetfile = "Puppetfile_new"
+require 'optparse'
 
-
-if ARGV.empty?
-  puts "USAGE: #{$0} /path/to/modules/list"
-  exit 2
-end
-
+# Methods
 def findModuleData(mod)
+  puts "Processing module #{mod}"
   url = "https://forgeapi.puppet.com:443/v3/modules/#{mod}"
   uri = URI.parse(url)
 
@@ -29,31 +20,78 @@ def findModuleData(mod)
   response = http.request(request)
 
   if response.code == '200'
+    puts "Module #{mod} found, processing info..."
     parsed = JSON.parse(response.body)
     name = parsed["slug"]
     version = parsed["current_release"]["version"]
     moddeps = parsed["current_release"]["metadata"]["dependencies"]
 
     return name, version, moddeps
+  else
+    puts "Module #{mod} not found"
   end
 end
 
 def processModules(name, version, moddeps)
   # Is the module decommissioned?
   if version == '999.999.999' then
+    puts "Module #{name} has been decommissioned"
     $decom.push(name)
   else
     $mods[name] = version
-  end
-  unless moddeps.empty?
-    moddeps.each do |dep|
-      $deps.push(dep) unless $deps.include? dep
+    unless moddeps.empty?
+      moddeps.each do |dep|
+        $deps.push(dep) unless $deps.include? dep
+      end
     end
   end
 end
 
+# Get arguments from CLI
+options = {}
+o = OptionParser.new do |opts|
+  opts.banner = "Usage: #{$0}"
+  opts.on('-i [/path/to/modules/list]', '--input [/path/to/modules/list', "Path to modules list") do |i|
+    options[:input] = i
+  end
+  opts.on('-o [/path/to/new/Puppetfile]', '--output [/path/to/new/Puppetfile]', "Path to output Puppetfile") do |o|
+    options[:output] = o
+  end
+  opts.on('-h', '--help', 'Display this help') do
+    puts opts
+   $opts = opts
+    exit
+  end
+end
+
+o.parse!
+
+# Validate arguments
+input = options[:input]
+output = options[:output] || 'Puppetfile'
+outdir = File.dirname(output)
+
+
+unless File.file?(input)
+  puts "ERROR: #{input} does not exist"
+  puts o
+  exit 2
+end
+
+unless File.directory?(outdir)
+  puts "ERROR: #{outdir} does not exist"
+  puts o
+  exit 2
+end
+
+# Set variables
+$not_found = Array.new()
+$decom = Array.new()
+$deps = Array.new()
+$mods = Hash.new()
+
 # Read modules from the mod_list file and query forge API for data
-file_in = File.open(mod_list, "r") do |fh|
+file_in = File.open(input, "r") do |fh|
   fh.each_line do |mod|
     mod.chomp!
     mod.gsub!(/\//,'-')
@@ -83,9 +121,9 @@ end
 
 # return the data found
 if $mods.empty?
-  puts "File #{puppetfile} not generated. No active modules were found on the Forge"
+  puts "File #{output} not generated. No active modules were found on the Forge"
 else
-  file_out = File.open(puppetfile, "w") do |fh|
+  file_out = File.open(output, "w") do |fh|
     $mods.each do |mod,ver|
       # Forgeapi uses dashes, r10k requires slashes
       name = mod.gsub(/-/, '/')
@@ -93,7 +131,7 @@ else
     end
   end
 
-  puts "File #{puppetfile} generated."
+  puts "File #{output} generated."
 
   # Clean exit
   if $not_found.empty? && $decom.empty? then
