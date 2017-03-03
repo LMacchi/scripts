@@ -51,10 +51,10 @@ end
 options = {}
 o = OptionParser.new do |opts|
   opts.banner = "Usage: #{$0}"
-  opts.on('-i [/path/to/modules/list]', '--input [/path/to/modules/list', "Path to modules list") do |i|
+  opts.on('-i [/path/to/original/Puppetfile]', '--input [/path/to/original/Puppetfile', "Path to original Puppetfile") do |i|
     options[:input] = i
   end
-  opts.on('-o [/path/to/new/Puppetfile]', '--output [/path/to/new/Puppetfile]', "Path to output Puppetfile") do |o|
+  opts.on('-o [/path/to/new/Puppetfile]', '--output [/path/to/new/Puppetfile]', "Path to new and improved Puppetfile") do |o|
     options[:output] = o
   end
   opts.on('-h', '--help', 'Display this help') do
@@ -71,6 +71,12 @@ input = options[:input]
 output = options[:output] || 'Puppetfile'
 outdir = File.dirname(output)
 
+
+unless input
+  puts "ERROR: input is a mandatory argument"
+  puts o
+  exit 2
+end
 
 unless File.file?(input)
   puts "ERROR: #{input} does not exist"
@@ -89,19 +95,27 @@ $not_found = Array.new()
 $decom = Array.new()
 $deps = Array.new()
 $mods = Hash.new()
+$mods_read = Array.new()
 
-# Read modules from the mod_list file and query forge API for data
+# Read modules from Puppetfile
 file_in = File.open(input, "r") do |fh|
-  fh.each_line do |mod|
-    mod.chomp!
-    mod.gsub!(/\//,'-')
-    # Method will retusn nil if mod not found
-    name, version, moddeps = findModuleData(mod)
-    if name then
-      processModules(name, version, moddeps)
-    else
-      $not_found.push(mod)
+  fh.each_line do |line|
+    line.chomp!
+    if line =~ /^\s*mod\s+('|")(\w+\/\w+)('|")/ then
+      $mods_read.push($2)
     end
+  end
+end
+
+# Search retrieved modules
+$mods_read.each do |mod|
+  mod.gsub!(/\//,'-')
+  # Method will retusn nil if mod not found
+  name, version, moddeps = findModuleData(mod)
+  if name then
+    processModules(name, version, moddeps)
+  else
+    $not_found.push(mod)
   end
 end
 
