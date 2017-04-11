@@ -101,7 +101,7 @@ $mods_read = Array.new()
 file_in = File.open(input, "r") do |fh|
   fh.each_line do |line|
     line.chomp!
-    if line =~ /^\s*mod\s+('|")(\w+\/\w+)('|")/ then
+    if line =~ /^\s*mod\s+('|")(\w+[\/-]\w+)('|")/ then
       $mods_read.push($2)
     end
   end
