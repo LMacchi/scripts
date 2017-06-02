@@ -51,6 +51,11 @@ if options[:method]
   fail "Allowed methods post and get" unless ['post','get'].include? options[:method]
 end
 
+if options[:method] == 'post' && ! options[:json_file]
+  puts "JSON file required when using method post"
+  exit 2
+end
+
 # Get Puppet settings
 Puppet.initialize_settings
 
