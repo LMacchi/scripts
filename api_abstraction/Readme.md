@@ -36,23 +36,35 @@ To get AD integration settings:
 
 To create a RBAC role:
 ```
+[root@10-32-175-155 scripts]# cat data.json
+{
+  "description": "Test User",
+  "display_name": "test_user",
+  "user_ids": [],
+  "group_ids": [],
+  "permissions": [
+    {
+      "action": "view_data",
+      "instance": "*",
+      "object_type": "nodes"
+    }
+  ]
+}
 [root@10-32-175-155 scripts]# ./api_abstraction.rb -a rbac -e roles -m post -j data.json
 Response 303
-[root@10-32-175-155 scripts]# ./api_abstraction.rb -a rbac -e roles -m get | python -mjson.tool
-[
-    {
-        "description": "Test User",
-        "display_name": "test_user",
-        "group_ids": [],
-        "id": 6,
-        "permissions": [
-            {
-                "action": "view_data",
-                "instance": "*",
-                "object_type": "nodes"
-            }
-        ],
-        "user_ids": []
-    }
-]
+[root@10-32-175-155 scripts]# ./api_abstraction.rb -a rbac -e roles/6 -m get | python -mjson.tool
+{
+    "description": "Test User",
+    "display_name": "test_user",
+    "group_ids": [],
+    "id": 6,
+    "permissions": [
+        {
+            "action": "view_data",
+            "instance": "*",
+            "object_type": "nodes"
+        }
+    ],
+    "user_ids": []
+}
 ```
