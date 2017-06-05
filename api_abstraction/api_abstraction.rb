@@ -7,7 +7,7 @@ require 'net/http'
 require 'uri'
 require 'json'
 
-require_relative 'get_puppet_urls.rb'
+require File.expand_path(File.dirname(__FILE__) + '/get_puppet_urls.rb')
 
 # Get options from command line
 options = {}
