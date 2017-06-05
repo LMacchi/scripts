@@ -85,7 +85,7 @@ when 'activity'
   $url = activity_url
 when 'puppetdb'
   $url = puppetdb_url
-when 'puppetca'
+when 'ca'
   $url = puppetca_url
 when 'admin'
   $url = admin_url
