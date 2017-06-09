@@ -14,13 +14,13 @@ ARGV.push('-h') if ARGV.empty?
 options = {}
 parser = OptionParser.new do |opts|
   opts.banner = "Usage: #{$0} [options]"
- opts.on('-a [activity|admin|ca|classifier|puppetdb|rbac]', '--api [activity|admin|ca|classifier|puppetdb|rbac]', "API to contact") do |a|
+  opts.on('-a [activity|admin|ca|classifier|puppetdb|rbac]', '--api [activity|admin|ca|classifier|puppetdb|rbac]', "API to contact") do |a|
     options[:api] = a
   end
   opts.on('-e [ARG]', '--endpoint [ARG]', "API end point") do |e|
     options[:endpoint] = e
   end
-  opts.on('-m [post|get]', '--method [post|get]', "HTTP Method") do |m|
+  opts.on('-m [post|get|put|delete]', '--method [post|get|put|delete]', "HTTP Method") do |m|
     options[:method] = m
   end
   opts.on('-j [/path/to/data.json]', '--json_file [/path/to/data.json]', "Path to data.json file") do |j|
@@ -49,11 +49,11 @@ if options[:json_file]
 end
 
 if options[:method]
-  fail "Allowed methods post and get" unless ['post','get'].include? options[:method]
+  fail "Allowed methods post, get, put and delete" unless ['post','get','put','delete'].include? options[:method]
 end
 
-if options[:method] == 'post' && ! options[:json_file]
-  puts "JSON file required when using method post"
+if (options[:method] == 'post' || options[:method] == 'put') && ! options[:json_file]
+  puts "JSON file required when using method post or put"
   exit 2
 end
 
@@ -108,13 +108,19 @@ if options[:method] == 'post'
   $request.content_type = 'application/json'
 elsif options[:method] == 'get'
   $request = Net::HTTP::Get.new(uri.request_uri)
+elsif options[:method] == 'delete'
+  $request = Net::HTTP::Delete.new(uri.request_uri)
+elsif options[:method] == 'put'
+  $request = Net::HTTP::Put.new(uri.request_uri)
+  $request.body = $data.to_json
+  $request.content_type = 'application/json'
 else
-  puts "Only methods post or get supported"
+  puts "Only methods post, get, delete and put supported"
   exit 2
 end
 
 response = http.request($request)
-if response.body.empty? then
+if ! response.body || response.body.empty? then
   output = "Response #{response.code}"
 else
   output = response.body
