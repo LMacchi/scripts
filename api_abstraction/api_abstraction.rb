@@ -10,6 +10,7 @@ require 'json'
 require File.expand_path(File.dirname(__FILE__) + '/get_puppet_urls.rb')
 
 # Get options from command line
+ARGV.push('-h') if ARGV.empty?
 options = {}
 parser = OptionParser.new do |opts|
   opts.banner = "Usage: #{$0} [options]"
