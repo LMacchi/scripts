@@ -34,7 +34,7 @@ end
 
 parser.parse!
 
-if options[:api].empty? || options[:method].empty? || options[:endpoint].empty?
+if ! options[:api] || ! options[:method] || ! options[:endpoint]
   puts "api, method and endpoint are required arguments"
   exit 2
 end
