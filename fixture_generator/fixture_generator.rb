@@ -4,14 +4,53 @@
 require 'r10k/puppetfile'
 require 'yaml'
 require 'erb'
+require 'optparse'
 
-if ARGV.length != 1
-  puts "USAGE: $0 /path/to/control/repo"
+# Get arguments from CLI
+options = {}
+o = OptionParser.new do |opts|
+  opts.banner = "Usage: #{$0}"
+  opts.on('-d', '--debug', 'Display debug messages') do
+    options[:debug] = true
+  end
+  opts.on('-p [/path/to/module]', '--path [/path/to/module]', "Path to module containing Puppetfile") do |o|
+    options[:path] = o
+  end
+  opts.on('-o [/path/to/new/fixtures.yml]', '--outfile [/path/to/new/fixtures.yml]', "Path to new fixtures.yml. Defaults to module/.fixtures.yml") do |o|
+    options[:outfile] = o
+  end
+  opts.on('-h', '--help', 'Display this help') do
+    puts opts
+    $opts = opts
+    exit 0 
+  end
+end
+
+o.parse!
+
+control_repo = options[:path]
+environment_conf = File.expand_path('./environment.conf', control_repo)
+fixtures_file = File.expand_path('.fixtures.yml', control_repo)
+outfile = options[:output] || control_repo + '/.fixtures.yml'
+
+# Validate Args
+unless control_repo
+  puts "ERROR: path is a mandatory argument"
+  puts o
   exit 2
 end
 
-control_repo = ARGV[0]
-environment_conf = File.expand_path('./environment.conf', control_repo)
+unless File.directory?(control_repo)
+  puts "ERROR: #{control_repo} does not exist"
+  puts o
+  exit 2
+end
+
+if File.exists?(fixtures_file)
+  puts "ERROR: #{fixtures_file} already exists. Remove or use outfile argument"
+  puts o
+  exit 2
+end
 
 symlinks = []
 forge_modules = []
@@ -22,6 +61,7 @@ puppetfile.load!
 
 modules = puppetfile.modules
 modules.each do |mod|
+  puts "DEBUG: Processing #{mod.name}" if options[:debug]
   # This logic could probably be cleaned up. A lot.
   if mod.is_a? R10K::Module::Forge
     if mod.expected_version.is_a?(Hash)
@@ -51,36 +91,38 @@ modules.each do |mod|
 end
 
 # Add modules linked in environment.conf
-env_conf = File.read(environment_conf)
-env_conf = env_conf.split("\n")
+if File.exists?(environment_conf)
+  env_conf = File.read(environment_conf)
+  env_conf = env_conf.split("\n")
 
-# Delete commented out lines
-env_conf.delete_if { |l| l =~ /^\s*#/}
+  # Delete commented out lines
+  env_conf.delete_if { |l| l =~ /^\s*#/}
 
-# Map the lines into a hash
-environment_config = {}
-env_conf.each do |line|
-  environment_config.merge!(Hash[*line.split('=').map { |s| s.strip}])
-end
+  # Map the lines into a hash
+  environment_config = {}
+  env_conf.each do |line|
+    environment_config.merge!(Hash[*line.split('=').map { |s| s.strip}])
+  end
 
-# Finally, split the modulepath values and return
-begin
-  environment_config['modulepath'] = environment_config['modulepath'].split(':')
-rescue
-  raise "modulepath was not found in environment.conf, don't know where to look for roles & profiles"
-end
+  # Finally, split the modulepath values and return
+  begin
+    environment_config['modulepath'] = environment_config['modulepath'].split(':')
+  rescue
+    raise "modulepath was not found in environment.conf, don't know where to look for roles & profiles"
+  end
 
-code_dirs = environment_config['modulepath']
-code_dirs.delete_if { |dir| dir[0] == '$'}
-code_dirs.each do |dir|
-  # We need to traverse down into these directories and create a symlink for each
-  # module we find because fixtures.yml is expecting the module's root not the
-  # root of modulepath
-  Dir["#{control_repo}/#{dir}/*"].each do |mod|
-    symlinks << {
-      'name' => File.basename(mod),
-      'dir' => '"#{source_dir}/' + "#{dir}/#{File.basename(mod)}\""
-    }
+  code_dirs = environment_config['modulepath']
+  code_dirs.delete_if { |dir| dir[0] == '$'}
+  code_dirs.each do |dir|
+    # We need to traverse down into these directories and create a symlink for each
+    # module we find because fixtures.yml is expecting the module's root not the
+    # root of modulepath
+    Dir["#{control_repo}/#{dir}/*"].each do |mod|
+      symlinks << {
+        'name' => File.basename(mod),
+        'dir' => '"#{source_dir}/' + "#{dir}/#{File.basename(mod)}\""
+      }
+    end
   end
 end
 
@@ -111,4 +153,6 @@ fixtures:
 <% end -%>
 )
 
-puts ERB.new(template, nil, '-').result(binding)
+file_out = File.open(outfile, "w") do |fh|
+  fh.puts ERB.new(template, nil, '-').result(binding)
+end
