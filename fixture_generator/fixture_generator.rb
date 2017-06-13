@@ -44,7 +44,7 @@ modules.each do |mod|
         'name' => mod.name,
         # I know I shouldn't be doing this, but trust me, there are no methods
         # anywhere that expose this value, I looked.
-        #'repo' => mod.instance_variable_get(:@remote),
+        'repo' => mod.instance_variable_get(:@remote),
         'ref' => mod.version
       }
   end
