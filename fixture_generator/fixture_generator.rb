@@ -31,7 +31,7 @@ o.parse!
 control_repo = options[:path]
 environment_conf = File.expand_path('./environment.conf', control_repo)
 fixtures_file = File.expand_path('.fixtures.yml', control_repo)
-outfile = options[:output] || control_repo + '/.fixtures.yml'
+outfile = options[:output] || "#{control_repo}/.fixtures.yml"
 
 # Validate Args
 unless control_repo
