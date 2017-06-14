@@ -125,15 +125,18 @@ class ControlRepo
         puts "Found module '#{m.owner}-#{m.name} v#{m.version}..."
       end
       if m.is_a?(R10K::Module::Forge)
-        dep = m.metadata.dependencies.map do |m|
-          _m    = m['name'].split('/')
-          owner = _m[0]
-          name  = _m[1]
-          {
-            'owner'   => owner,
-            'name'    => name,
-            'version' => nil,
-          }
+        begin
+          dep = m.metadata.dependencies.map do |m|
+            _m    = m['name'].split('/')
+            owner = _m[0]
+            name  = _m[1]
+            {
+              'owner'   => owner,
+              'name'    => name,
+              'version' => nil,
+            }
+          end
+        rescue NoMethodError => e
         end
         dep_list << dep
         dep_list.flatten!
@@ -150,9 +153,12 @@ class ControlRepo
 
   def check_list(deps, list)
     deps.map do |m|
-      if list.select { |x| x['owner'] == m['owner'] && x['name'] == m['name']}.empty?
-        puts "Found dependency '#{m['owner']}-#{m['name']}'..."
-        m
+      begin
+        if list.select { |x| x['owner'] == m['owner'] && x['name'] == m['name']}.empty?
+          puts "Found dependency '#{m['owner']}-#{m['name']}'..."
+          m
+        end
+      rescue NoMethodError => e
       end
     end.compact
   end
