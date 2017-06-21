@@ -1,0 +1,34 @@
+{
+  "name": "saz-sudo",
+  "version": "4.1.0",
+  "author": "saz",
+  "summary": "Manage sudo configuration via Puppet",
+  "license": "Apache-2.0",
+  "source": "https://github.com/saz/puppet-sudo",
+  "project_page": "https://github.com/saz/puppet-sudo",
+  "issues_url": "https://github.com/saz/puppet-sudo/issues",
+  "dependencies": [
+    {"name":"puppetlabs/stdlib","version_requirement":">=2.6.0"}
+  ],
+  "data_provider": null,
+  "tags": [
+    "sudo"
+  ],
+  "operatingsystem_support": [
+    {
+      "operatingsystem": "RedHat",
+      "operatingsystemrelease": [
+        "5.0",
+        "6.0"
+      ]
+    },
+    {
+      "operatingsystem": "Ubuntu",
+      "operatingsystemrelease": [
+        "12.04",
+        "10.04",
+        "14.04"
+      ]
+    }
+  ]
+}

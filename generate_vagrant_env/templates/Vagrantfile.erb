@@ -1,0 +1,73 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+#
+
+### User Customizations ###
+box = '<%= box %>'
+box_ver = '<%= box_ver %>'
+box_url = '<%= box_url %>'
+mod_dir = '<%= mod_dir %>'
+disk = '<%= disk %>'
+<% if node_name.nil? -%>
+node_name = 'sea1l1test01.davita.corp'
+<% else -%>
+node_name = '<%= node_name %>'
+<% end -%>
+
+### Internal Vars ###
+mod_path = '<%= File.dirname(mod_dir)%>'
+mod_name = '<%= File.basename(mod_dir)%>'
+puppet_bin = '<%= puppet_bin %>'
+code_dir = '<%= code_dir %>'
+global_mod_dir = '<%= global_mod_dir %>'
+
+Vagrant.configure(2) do |config|
+  config.vm.define "rhel" do |rhel|
+    rhel.vm.box = box
+<% unless box_ver.nil? -%>
+    rhel.vm.box_version = box_ver
+<% end -%>
+<% unless box_url.nil? -%>
+    rhel.vm.box_url = box_url
+<% end -%>
+    rhel.vm.hostname =  node_name
+    rhel.vm.network "private_network", type: "dhcp"
+    rhel.vm.synced_folder mod_path, "<%= global_mod_dir %>"
+    rhel.vm.provision :shell, privileged: true, inline: <<-SHELL
+      sudo systemctl stop firewalld
+      sudo hostnamectl set-hostname node_name
+      sudo #{puppet_bin}/r10k version > /dev/null 2>&1
+      if [[ $? -ne 0 ]]; then
+        echo "Installing R10k gem"
+        sudo #{puppet_bin}/gem install --no-rdoc --no-ri r10k > /dev/null 2>&1
+        echo "R10k gem installed"
+      else
+        echo "R10k gem already installed"
+      fi
+      echo "Installing git"
+      sudo #{puppet_bin}/puppet resource package git ensure=present
+      cd #{global_mod_dir}/#{mod_name}
+      echo "Installing modules in the Puppetfile"
+      sudo #{puppet_bin}/r10k puppetfile install
+    SHELL
+
+<% unless disk.nil? -%>
+  rhel.vm.provider "virtualbox" do |vb|
+    unless File.exist?(disk)
+      vb.customize ['createhd', '--filename', disk, '--variant', 'Fixed', '--size', 1 * 1024]
+    end
+      vb.customize ['storageattach', :id,  '--storagectl', 'SATA', '--port', 1, '--device', 0, '--type', 'hdd', '--medium', disk]
+  end
+<% end -%>
+
+    rhel.vm.provision :puppet do |puppet|
+      puppet.manifests_path = "puppet/manifests"
+      puppet.module_path = "puppet/modules"
+      puppet.manifest_file  = "site.pp"
+      puppet.environment_path = "puppet/environments"
+      puppet.environment = "production"
+      puppet.options = "--verbose"
+    end
+end
+
+end
