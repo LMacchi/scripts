@@ -5,6 +5,7 @@ Script that generates:
 
 In order to test a module under development.
 
+```
 Usage: ./gen_files.rb
     -m, --mod_dir [/path/to/module]  Required: Path to module containing under development. Ex: ~/my_modules/apache
     -b, --box [vagrant_box]          Required: Vagrant box title. Ex: puppetlabs/centos-7.2-64-puppet
@@ -15,6 +16,7 @@ Usage: ./gen_files.rb
     -n, --node_name [node_name]      Optional: Name for the node to be created. Ex: test.puppetlabs.vm
     -p, --puppet [puppet_version]    Optional: Puppet Enterprise version installed in the node. Ex: 2016.4.5. Default is 3
     -h, --help                       Display this help
+```
 
 Once the files have been generated:
 
