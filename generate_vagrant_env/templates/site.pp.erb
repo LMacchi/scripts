@@ -1,5 +1,4 @@
 node default {
-  # include profile::davita_base
   include <%= File.basename(mod_dir) %>
   ini_setting { 'test':
     ensure  => absent,
