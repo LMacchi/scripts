@@ -19,6 +19,9 @@ o = OptionParser.new do |opts|
   opts.on('-o [/path/to/new/fixtures.yml]', '--outfile [/path/to/new/fixtures.yml]', "Path to new fixtures.yml. Defaults to module/.fixtures.yml") do |o|
     options[:outfile] = o
   end
+  opts.on('-f', '--force', 'Force overwrite of fixtures.yml file') do |o|
+    options[:force] = o
+  end
   opts.on('-h', '--help', 'Display this help') do
     puts opts
     $opts = opts
@@ -46,8 +49,8 @@ unless File.directory?(control_repo)
   exit 2
 end
 
-if File.exists?(fixtures_file)
-  puts "ERROR: #{fixtures_file} already exists. Remove or use outfile argument"
+if File.exists?(fixtures_file) and !options[:force]
+  puts "ERROR: #{fixtures_file} already exists. Remove, use outfile argument or force."
   puts o
   exit 2
 end
@@ -104,24 +107,23 @@ if File.exists?(environment_conf)
     environment_config.merge!(Hash[*line.split('=').map { |s| s.strip}])
   end
 
-  # Finally, split the modulepath values and return
-  begin
+  # Finally, check if there are special modules inside the control-repo
+  # If so, split the modulepath values and return a symlink
+  if environment_config['modulepath']
     environment_config['modulepath'] = environment_config['modulepath'].split(':')
-  rescue
-    raise "modulepath was not found in environment.conf, don't know where to look for roles & profiles"
-  end
-
-  code_dirs = environment_config['modulepath']
-  code_dirs.delete_if { |dir| dir[0] == '$'}
-  code_dirs.each do |dir|
-    # We need to traverse down into these directories and create a symlink for each
-    # module we find because fixtures.yml is expecting the module's root not the
-    # root of modulepath
-    Dir["#{control_repo}/#{dir}/*"].each do |mod|
-      symlinks << {
-        'name' => File.basename(mod),
-        'dir' => '"#{source_dir}/' + "#{dir}/#{File.basename(mod)}\""
-      }
+  
+    code_dirs = environment_config['modulepath']
+    code_dirs.delete_if { |dir| dir[0] == '$'}
+    code_dirs.each do |dir|
+      # We need to traverse down into these directories and create a symlink for each
+      # module we find because fixtures.yml is expecting the module's root not the
+      # root of modulepath
+      Dir["#{control_repo}/#{dir}/*"].each do |mod|
+        symlinks << {
+          'name' => File.basename(mod),
+          'dir' => '"#{source_dir}/' + "#{dir}/#{File.basename(mod)}\""
+        }
+      end
     end
   end
 end
