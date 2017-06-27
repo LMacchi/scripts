@@ -32,6 +32,7 @@ end
 o.parse!
 
 control_repo = options[:path]
+puppetfile = File.expand_path('./Puppetfile', control_repo)
 environment_conf = File.expand_path('./environment.conf', control_repo)
 fixtures_file = File.expand_path('.fixtures.yml', control_repo)
 outfile = options[:output] || "#{control_repo}/.fixtures.yml"
@@ -46,6 +47,11 @@ end
 unless File.directory?(control_repo)
   puts "ERROR: #{control_repo} does not exist"
   puts o
+  exit 2
+end
+
+unless File.exists?(puppetfile)
+  puts "ERROR: Puppetfile does not exist in #{control_repo}"
   exit 2
 end
 
