@@ -1,9 +1,3 @@
 node default {
   include <%= File.basename(mod_dir) %>
-  ini_setting { 'test':
-    ensure  => absent,
-    path    => '/etc/puppetlabs/puppet/puppet.conf',
-    section => 'agent',
-    setting => 'blah',
-  }
 }
