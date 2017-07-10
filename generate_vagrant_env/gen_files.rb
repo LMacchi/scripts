@@ -28,8 +28,11 @@ o = OptionParser.new do |opts|
   opts.on('-n [node_name]', '--node_name [node_name]', "Optional: Name for the node to be created. Ex: test.puppetlabs.vm") do |o|
     options[:node_name] = o
   end
-  opts.on('-p [puppet_version]', '--puppet [puppet_version]', "Optional: Puppet Enterprise version installed in the node. Ex: 2016.4.5. Default is 3") do |o|
+  opts.on('-p [puppet_version]', '--puppet [puppet_version]', "Optional: Puppet Enterprise version installed in the node. Ex: 2016.4.5. Default is 4") do |o|
     options[:puppet] = o
+  end
+  opts.on('-s [puppet_server_host]', '--server [puppet_version]', "Optional: URL/IP of the Puppet Master server") do |o|
+    options[:server] = o
   end
   opts.on('-h', '--help', 'Display this help') do
     puts opts
@@ -47,9 +50,10 @@ box_url = options[:box_url]
 disk = options[:disk]
 node_name = options[:node_name]
 puppet = options[:puppet]
+master = options[:server]
 
 # Validate vars
-puppet = '3' unless puppet
+puppet = '4' unless puppet
 
 unless mod_dir
   puts "ERROR: mod_dir is a required argument"
@@ -76,33 +80,35 @@ elsif puppet =~ /^4/ || puppet =~ /^2/
   puppet_bin = '/opt/puppetlabs/puppet/bin'
 end
 
-# These values come from Vagrant
+# These values come from the Puppet provisioner in Vagrant
 code_dir = '/vagrant/puppet'
 global_mod_dir = '/etc/puppet/modules'
 
 # Generate Vagrantfile
-vf_template = 'templates/Vagrantfile.erb'
+vf_template = "#{File.expand_path(File.dirname(__FILE__))}/templates/Vagrantfile.erb"
+puts vf_template
+exit 0
 unless File.exists?(vf_template)
   puts "Vagrantfile template not found. Make sure it is in #{vf_template} to continue."
   exit 2
 end
 
 vf = File.read(vf_template)
-vf_out = 'Vagrantfile'
+vf_out = "#{File.expand_path(File.dirname(__FILE__))}/Vagrantfile"
 
 file_out = File.open(vf_out, "w") do |fh|
   fh.puts ERB.new(vf, nil, '-').result()
 end
 
 # Generate site.pp
-site_template = 'templates/site.pp.erb'
+site_template = "#{File.expand_path(File.dirname(__FILE__))}/templates/site.pp.erb"
 unless File.exists?(site_template)
   puts "Site.pp template not found. Make sure it is in #{site_template} to continue."
   exit 2
 end
 
 site = File.read(site_template)
-site_out = 'puppet/manifests/site.pp'
+site_out = "#{File.expand_path(File.dirname(__FILE__))}/puppet/manifests/site.pp"
 
 file_out = File.open(site_out, "w") do |fh|
   fh.puts ERB.new(site, nil, '-').result(binding)
