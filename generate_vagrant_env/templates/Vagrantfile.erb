@@ -4,11 +4,18 @@
 
 ### User Customizations ###
 mod_dir = '<%= mod_dir %>'
+<% if disk -%>
 disk = '<%= disk %>'
-<% if node_name.nil? -%>
-node_name = 'sea1l1test01.davita.corp'
-<% else -%>
+<% end -%>
+<% if node_name -%>
 node_name = '<%= node_name %>'
+<% else -%>
+node_name = 'test.lmacchi.com'
+<% end -%>
+<% if master -%>
+yum_repo = 'https://<%= master %>:8140/packages/current/el-7-x86_64.repo'
+<% else -%>
+rpm_url = 'http://yum.puppetlabs.com/puppetlabs-release-el-7.noarch.rpm'
 <% end -%>
 
 ### Internal Vars ###
@@ -19,20 +26,34 @@ code_dir = '<%= code_dir %>'
 global_mod_dir = '<%= global_mod_dir %>'
 
 Vagrant.configure(2) do |config|
-  config.vm.define "rhel" do |rhel|
-    rhel.vm.box = '<%= box %>'
+  config.vm.define "node" do |node|
+    node.vm.box = '<%= box %>'
 <% unless box_ver.nil? -%>
-    rhel.vm.box_version = '<%= box_ver %>'
+    node.vm.box_version = '<%= box_ver %>'
 <% end -%>
 <% unless box_url.nil? -%>
-    rhel.vm.box_url = '<%= box_url %>'
+    node.vm.box_url = '<%= box_url %>'
 <% end -%>
-    rhel.vm.hostname = node_name
-    rhel.vm.network "private_network", type: "dhcp"
-    rhel.vm.synced_folder mod_path, "<%= global_mod_dir %>"
-    rhel.vm.provision :shell, privileged: true, inline: <<-SHELL
+    node.vm.hostname = node_name
+    node.vm.network "private_network", type: "dhcp"
+    node.vm.synced_folder mod_path, "<%= global_mod_dir %>"
+    node.vm.provision :shell, privileged: true, inline: <<-SHELL
       sudo systemctl stop firewalld
       sudo hostnamectl set-hostname #{node_name}
+      # Is Puppet installed?
+      ls #{puppet_bin}/puppet > /dev/null 2>&1
+      # This is temporary, no logic, just install LTS agent
+      if [[ $? -ne 0 ]]; then
+        sudo yum -y remove puppet puppet-agent > /dev/null 2>&1
+<% if master -%>
+        sudo wget -O /etc/yum.repos.d/puppet.repo #{yum_repo} 
+<% else -%>
+        sudo yum -y install #{rpm_url}
+<% end -%>
+        sudo yum -y install puppet-agent
+        echo "export PATH=#{puppet_bin}:$PATH" >> ~/.bash_profile
+        export PATH=#{puppet_bin}:$PATH
+      fi
       sudo #{puppet_bin}/r10k version > /dev/null 2>&1
       if [[ $? -ne 0 ]]; then
         echo "Installing R10k gem"
@@ -41,15 +62,19 @@ Vagrant.configure(2) do |config|
       else
         echo "R10k gem already installed"
       fi
-      echo "Installing git"
-      sudo #{puppet_bin}/puppet resource package git ensure=present
+      # Is git installed?
+      which git > /dev/null 2>&1
+      if [[ $? -ne 0 ]]; then
+        echo "Installing git"
+        sudo #{puppet_bin}/puppet resource package git ensure=present
+      fi
       cd #{global_mod_dir}/#{mod_name}
       echo "Installing modules in the Puppetfile"
       sudo #{puppet_bin}/r10k puppetfile install
     SHELL
 
 <% unless disk.nil? -%>
-  rhel.vm.provider "virtualbox" do |vb|
+  node.vm.provider "virtualbox" do |vb|
     unless File.exist?(disk)
       vb.customize ['createhd', '--filename', disk, '--variant', 'Fixed', '--size', 1 * 1024]
     end
@@ -57,7 +82,7 @@ Vagrant.configure(2) do |config|
   end
 <% end -%>
 
-    rhel.vm.provision :puppet do |puppet|
+    node.vm.provision :puppet do |puppet|
       puppet.manifests_path = "puppet/manifests"
       puppet.module_path = "puppet/modules"
       puppet.manifest_file  = "site.pp"
