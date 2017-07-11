@@ -1,7 +1,0 @@
-node default {
-<% dirs.each do |dir| -%>
-<%   if dir !~ /^\./ -%>
-  include <%= dir %>
-<%   end -%>
-<% end -%>
-}

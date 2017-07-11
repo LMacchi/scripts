@@ -1,4 +1,0 @@
-Vagrantfile
-puppet/manifests/site.pp
-*.vdi
-.vagrant
