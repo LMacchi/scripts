@@ -1,3 +1,7 @@
 node default {
-  include <%= File.basename(mod_dir) %>
+<% dirs.each do |dir| -%>
+<%   if dir !~ /^\./ -%>
+  include <%= dir %>
+<%   end -%>
+<% end -%>
 }

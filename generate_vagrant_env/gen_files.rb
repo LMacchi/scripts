@@ -5,12 +5,13 @@
 
 require 'optparse'
 require 'erb'
+require 'pathname'
 
 # Get arguments from CLI
 options = {}
 o = OptionParser.new do |opts|
   opts.banner = "Usage: #{$0}"
-  opts.on('-m [/path/to/module]', '--mod_dir [/path/to/module]', "Required: Path to module containing under development. Ex: ~/my_modules/apache") do |o|
+  opts.on('-m [/path/to/module/project]', '--mod_dir [/path/to/module/project]', "Required: Path to project containing modules under development. Ex: ~/workspace/project1") do |o|
     options[:mod_dir] = o
   end
   opts.on('-b [vagrant_box]', '--box [vagrant_box]', "Required: Vagrant box title. Ex: puppetlabs/centos-7.2-64-puppet") do |o|
@@ -86,8 +87,6 @@ global_mod_dir = '/etc/puppet/modules'
 
 # Generate Vagrantfile
 vf_template = "#{File.expand_path(File.dirname(__FILE__))}/templates/Vagrantfile.erb"
-puts vf_template
-exit 0
 unless File.exists?(vf_template)
   puts "Vagrantfile template not found. Make sure it is in #{vf_template} to continue."
   exit 2
@@ -100,6 +99,9 @@ file_out = File.open(vf_out, "w") do |fh|
   fh.puts ERB.new(vf, nil, '-').result()
 end
 
+# Read all directories in mod_dir
+dirs = Pathname.new(mod_dir).children.select {|f| f.directory? }.collect { |p| File.basename(p.to_s) }
+
 # Generate site.pp
 site_template = "#{File.expand_path(File.dirname(__FILE__))}/templates/site.pp.erb"
 unless File.exists?(site_template)
@@ -111,5 +113,19 @@ site = File.read(site_template)
 site_out = "#{File.expand_path(File.dirname(__FILE__))}/puppet/manifests/site.pp"
 
 file_out = File.open(site_out, "w") do |fh|
-  fh.puts ERB.new(site, nil, '-').result(binding)
+  fh.puts ERB.new(site, nil, '-').result()
+end
+
+# Generate Puppetfile
+pf_template = "#{File.expand_path(File.dirname(__FILE__))}/templates/Puppetfile.erb"
+unless File.exists?(pf_template)
+  puts "Puppetfile template not found. Make sure it is in #{pf_template} to continue."
+  exit 2
+end
+
+pf = File.read(pf_template)
+pf_out = "#{mod_dir}/Puppetfile"
+
+file_out = File.open(pf_out, "w") do |fh|
+  fh.puts ERB.new(pf, nil, '-').result()
 end
