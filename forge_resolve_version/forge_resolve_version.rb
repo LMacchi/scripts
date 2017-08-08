@@ -34,7 +34,7 @@ class ForgeVersions
   end
 
   def add_decom(mod)
-    @decom.push(decom) unless @decom.include? mod
+    @decom.push(mod) unless @decom.include? mod
   end
 
   def add_lines(line)
@@ -174,11 +174,15 @@ class ForgeVersions
 
   # return the data found
   def write_response(output)
+    forge = @lines.grep /^forge/i
     file_out = File.open(output, "w") do |fh|
+      if forge 
+        fh.puts forge.to_s + "\n"
+      end
       @modules.each do |mod,ver|
         fh.puts "mod '#{mod}', '#{ver}'"
       end
-      fh.puts @lines
+      fh.puts @lines - forge
     end
   end
 end
@@ -203,6 +207,7 @@ f.search_modules(@mods_read)
 f.search_dependencies(@deps)
 
 # Processing done, write to output
+require 'pry'; binding.pry
 if @mods_read.any? or @lines.any?
   f.write_response(output)
 else
