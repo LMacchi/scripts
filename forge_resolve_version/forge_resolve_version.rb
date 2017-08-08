@@ -12,11 +12,11 @@ class ForgeVersions
 
   def initialize
     @read_mods = Array.new
-    @deps = Array.new
+    @deps      = Array.new
     @not_found = Array.new
-    @decom = Array.new
-    @lines = Array.new
-    @modules = Hash.new
+    @decom     = Array.new
+    @lines     = Array.new
+    @modules   = Hash.new
   end
 
   # Cannot use attr_writers for arrays/hashes
