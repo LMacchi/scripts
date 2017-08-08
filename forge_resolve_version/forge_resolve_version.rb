@@ -4,7 +4,6 @@ require 'net/https'
 require 'uri'
 require 'json'
 require 'optparse'
-require 'puppet'
 
 
 class ForgeVersions
@@ -199,20 +198,18 @@ f = ForgeVersions.new
 
 options, help = f.parse_options()
 input, output, outdir = f.validate_options(options, help)
+
 f.read_puppetfile(input)
-# I have an array of modules and an array of lines
 f.search_modules(@mods_read)
-# I've found existant modules, non-existant, deprecated
-# and dependencies
 f.search_dependencies(@deps)
 
 # Processing done, write to output
-require 'pry'; binding.pry
 if @mods_read.any? or @lines.any?
   f.write_response(output)
 else
   puts "No modules found. #{output} not created"
 end
+
 # Output warnings
 if @not_found.any?
   puts "WARNING: Modules not found: #{@not_found}"
@@ -220,5 +217,3 @@ end
 if @decom.any?
   puts "WARNING: Modules deprecated: #{@decom}"
 end
-
-
