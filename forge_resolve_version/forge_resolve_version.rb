@@ -115,7 +115,6 @@ class ForgeVersions
       if deps.any? and ! m.depr
         deps.each do |mod|
           name = mod['name'].gsub(/\//,'-')
-          puts "Processing #{name}, exists: #{mod_exists?(name,data)}"
           unless mod_exists?(name,data)
             n, data = findModuleData(name, data)
             data.push(n)
