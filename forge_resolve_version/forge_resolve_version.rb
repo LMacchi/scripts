@@ -85,7 +85,7 @@ class ForgeVersions
       _mod = mod.gsub(/\//,'-')
       m = ForgeModule.new
       m, data = findModuleData(_mod, data)
-      data.push(m) unless data.include? m
+      data.push(m) unless mod_exists?(_mod,data)
     end
     return data
   end
@@ -115,7 +115,8 @@ class ForgeVersions
       if deps.any? and ! m.depr
         deps.each do |mod|
           name = mod['name'].gsub(/\//,'-')
-          if ! mod_exists?(name,data)
+          puts "Processing #{name}, exists: #{mod_exists?(name,data)}"
+          unless mod_exists?(name,data)
             n, data = findModuleData(name, data)
             data.push(n)
           end
