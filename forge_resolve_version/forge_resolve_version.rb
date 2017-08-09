@@ -6,13 +6,14 @@ require 'json'
 require 'optparse'
 
 class ForgeModule
-  attr_accessor :name, :version, :found, :depr
+  attr_accessor :name, :version, :found, :depr, :deps
 
   def initialize
     @name    = ''
     @version = ''
     @found   = true
     @depr    = false
+    @deps    = []
   end
 
   def return_line(mod)
@@ -115,6 +116,7 @@ class ForgeVersions
       if deps.any? and ! m.depr
         deps.each do |mod|
           name = mod['name'].gsub(/\//,'-')
+          m.deps.push(name)
           unless mod_exists?(name,data)
             n, data = findModuleData(name, data)
             data.push(n)
