@@ -24,7 +24,7 @@ class ForgeModule
   end
 
   def warn_depr(mod)
-    return "Warning: #{mod.name} was not found"
+    return "Warning: #{mod.name} is deprecated"
   end
 
 end
