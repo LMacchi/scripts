@@ -1,165 +1,212 @@
 #!/opt/puppetlabs/puppet/bin/ruby
 
-require "net/https"
-require "uri"
-require "json"
+require 'net/https'
+require 'uri'
+require 'json'
 require 'optparse'
 
-# Methods
-def findModuleData(mod)
-  puts "Processing module #{mod}"
-  url = "https://forgeapi.puppet.com:443/v3/modules/#{mod}"
-  uri = URI.parse(url)
+class ForgeModule
+  attr_accessor :name, :version, :found, :depr, :deps
 
-  http = Net::HTTP.new(uri.host, uri.port)
-  http.use_ssl = true
-  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-
-  request = Net::HTTP::Get.new(uri.request_uri, {'User-Agent' => 'test'})
-
-  response = http.request(request)
-
-  if response.code == '200'
-    puts "Module #{mod} found, processing info..."
-    parsed = JSON.parse(response.body)
-    name = parsed["slug"]
-    version = parsed["current_release"]["version"]
-    moddeps = parsed["current_release"]["metadata"]["dependencies"]
-
-    return name, version, moddeps
-  else
-    puts "Module #{mod} not found"
+  def initialize
+    @name    = ''
+    @version = ''
+    @found   = true
+    @depr    = false
+    @deps    = []
   end
+
+  def return_line(mod)
+    return "mod '#{mod.name}', '#{mod.version}'"
+  end
+
+  def warn_nf(mod)
+    return "Warning: #{mod.name} was not found"
+  end
+
+  def warn_depr(mod)
+    return "Warning: #{mod.name} is deprecated"
+  end
+
 end
 
-def processModules(name, version, moddeps)
-  # Is the module decommissioned?
-  if version == '999.999.999' then
-    puts "Module #{name} has been decommissioned"
-    $decom.push(name)
-  else
-    $mods[name] = version
-    unless moddeps.empty?
-      moddeps.each do |dep|
-        $deps.push(dep) unless $deps.include? dep
+class ForgeVersions
+
+  attr_accessor :mods_read, :lines, :data
+
+  def initialize
+    @mods_read  = []
+    @lines      = []
+    @data       = {}
+  end
+
+  def get_mod_name(mod)
+    mod =~ /^\s*mod\s+('|")(\w+[\/-]\w+)('|"),\s+\S+/
+    return $2
+  end
+
+  def is_depr?(ver)
+    ver == '999.999.999'
+  end
+
+  def mod_exists?(mod, data)
+    o = false
+    data.each do |d|
+      o = (d.name == mod)
+      break if (o == true)
+    end
+    return o
+  end
+
+
+  def read_puppetfile(input)
+    mods_read = []
+    lines = []
+    # Read modules from Puppetfile
+    file_in = File.open(input, "r") do |fh|
+      fh.each_line do |line|
+        line.chomp!
+        name = get_mod_name(line)
+        if name
+          mods_read.push(name) unless mods_read.include? name
+        else
+          lines.push(line)
+        end
       end
     end
+    return mods_read, lines
+  end
+
+  # Arg: Array with list of modules 'author/name'
+  # Ret: Array of ForgeModule objects
+  def load_modules(mods)
+    data = []
+    # Search retrieved modules
+    mods.each do |mod|
+      _mod = mod.gsub(/\//,'-')
+      m = ForgeModule.new
+      m, data = findModuleData(_mod, data)
+      data.push(m) unless mod_exists?(_mod,data)
+    end
+    return data
+  end
+
+  # Arg: String containing name of module 'author/name'
+  # Ret: ForgeModule object populated
+  def findModuleData(mod, data)
+    m = ForgeModule.new
+    m.name = mod
+    puts "Processing module #{mod}"
+    url = "https://forgeapi.puppet.com:443/v3/modules/#{mod}"
+    uri = URI.parse(url)
+
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+    request = Net::HTTP::Get.new(uri.request_uri, {'User-Agent' => 'test'})
+    response = http.request(request)
+
+    if response.code == '200'
+      parsed = JSON.parse(response.body)
+      m.version = parsed["current_release"]["version"]
+      m.found = true
+      m.depr = is_depr?(parsed["current_release"]["version"])
+      deps = parsed["current_release"]["metadata"]["dependencies"]
+      if deps.any? and ! m.depr
+        deps.each do |mod|
+          name = mod['name'].gsub(/\//,'-')
+          m.deps.push(name)
+          unless mod_exists?(name,data)
+            n, data = findModuleData(name, data)
+            data.push(n)
+          end
+        end
+      end
+    else
+      m.found = false 
+    end
+    return m, data
   end
 end
 
-# Get arguments from CLI
-options = {}
-o = OptionParser.new do |opts|
-  opts.banner = "Usage: #{$0}"
-  opts.on('-i [/path/to/original/Puppetfile]', '--input [/path/to/original/Puppetfile', "Path to original Puppetfile") do |i|
-    options[:input] = i
+# Methods needed to get args and pretty print the objects
+def parse_options()
+  # Get arguments from CLI
+  options = {}
+  help = OptionParser.new do |opts|
+    opts.banner = "Usage: #{$0}"
+    opts.on('-i [/path/to/original/Puppetfile]', '--input [/path/to/original/Puppetfile', "Path to original Puppetfile") do |i|
+      options[:input] = i
+    end
+    opts.on('-o [/path/to/new/Puppetfile]', '--output [/path/to/new/Puppetfile]', "Path to new and improved Puppetfile") do |o|
+      options[:output] = o
+    end
+    opts.on('-h', '--help', 'Display this help') do
+      puts opts
+      exit
+    end
   end
-  opts.on('-o [/path/to/new/Puppetfile]', '--output [/path/to/new/Puppetfile]', "Path to new and improved Puppetfile") do |o|
-    options[:output] = o
-  end
-  opts.on('-h', '--help', 'Display this help') do
-    puts opts
-   $opts = opts
-    exit
-  end
+  help.parse!
+  return options, help
 end
 
-o.parse!
+def validate_options(options, help)
+  # Validate arguments
+  input = options[:input]
+  output = options[:output] || 'Puppetfile'
+  outdir = File.dirname(output)
 
-# Validate arguments
-input = options[:input]
-output = options[:output] || 'Puppetfile'
-outdir = File.dirname(output)
+  unless input
+    puts "ERROR: input is a mandatory argument"
+    puts help
+    exit 2
+  end
 
+  unless File.file?(input)
+    puts "ERROR: #{input} does not exist"
+    puts help
+    exit 2
+  end
 
-unless input
-  puts "ERROR: input is a mandatory argument"
-  puts o
-  exit 2
+  unless File.directory?(outdir)
+    puts "ERROR: #{outdir} does not exist"
+    puts help
+    exit 2
+  end
+
+  return input, output, outdir
 end
 
-unless File.file?(input)
-  puts "ERROR: #{input} does not exist"
-  puts o
-  exit 2
-end
-
-unless File.directory?(outdir)
-  puts "ERROR: #{outdir} does not exist"
-  puts o
-  exit 2
+def write_response(output, lines, data)
+  forge = lines.grep /^forge/i
+  file_out = File.open(output, "w") do |fh|
+    if forge.any? 
+      fh.puts forge.first
+      fh.puts ""
+    end
+    data.each do |mod|
+      if ! mod.found 
+        puts mod.warn_nf(mod)
+      elsif mod.depr
+        puts mod.warn_depr(mod)
+      else
+        fh.puts mod.return_line(mod)
+      end
+    end
+    fh.puts lines - forge
+  end
 end
 
 # Set variables
-$not_found = Array.new()
-$decom = Array.new()
-$deps = Array.new()
-$mods = Hash.new()
-$mods_read = Array.new()
+options, help = parse_options()
+input, output, outdir = validate_options(options, help)
+f = ForgeVersions.new
 
-# Read modules from Puppetfile
-file_in = File.open(input, "r") do |fh|
-  fh.each_line do |line|
-    line.chomp!
-    if line =~ /^\s*mod\s+('|")(\w+[\/-]\w+)('|")/ then
-      $mods_read.push($2)
-    end
-  end
-end
+f.mods_read, f.lines = f.read_puppetfile(input)
+f.data = f.load_modules(f.mods_read)
+# Now I have an array of modules
 
-# Search retrieved modules
-$mods_read.each do |mod|
-  mod.gsub!(/\//,'-')
-  # Method will retusn nil if mod not found
-  name, version, moddeps = findModuleData(mod)
-  if name then
-    processModules(name, version, moddeps)
-  else
-    $not_found.push(mod)
-  end
-end
+write_response(output, f.lines, f.data)
+exit 0
 
-# Look for dependencies
-unless $deps.empty?
-  $deps.each do |dep|
-    # Dependencies are returned with a slash, yay for consistency
-    mod = dep["name"].gsub!(/\//, "-")
-    name, version, moddeps = findModuleData(mod)
-    if name then
-      processModules(name, version, moddeps)
-    else
-      $not_found.push(mod)
-    end
-  end
-end
-
-# return the data found
-if $mods.empty?
-  puts "File #{output} not generated. No active modules were found on the Forge"
-else
-  file_out = File.open(output, "w") do |fh|
-    $mods.each do |mod,ver|
-      # Forgeapi uses dashes, r10k requires slashes
-      name = mod.gsub(/-/, '/')
-      fh.puts "mod '#{name}', '#{ver}'"
-    end
-  end
-
-  puts "File #{output} generated."
-
-  # Clean exit
-  if $not_found.empty? && $decom.empty? then
-    puts "All modules found"
-    exit 0
-  end
-end
-
-# Errors found
-if ! $not_found.empty? then
-  puts "Modules not found: #{$not_found}"
-end
-if ! $decom.empty? then
-  puts "Modules decommissioned: #{$decom}"
-end
-
-exit 2
