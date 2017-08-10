@@ -22,5 +22,5 @@ Processing module puppet-staging
 Processing module blah-bleh
 Processing module wdijkerman-zabbix
 Warning: blah-bleh was not found
-Warning: wdijkerman-zabbix was not found
+Warning: wdijkerman-zabbix is deprecated
 ```
