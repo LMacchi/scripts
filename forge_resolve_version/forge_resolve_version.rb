@@ -41,8 +41,11 @@ class ForgeVersions
   end
 
   def get_mod_name(mod)
-    mod =~ /^\s*mod\s+('|")(\w+[\/-]\w+)('|"),\s+\S+/
-    return $2
+    if mod =~ /^\s*mod\s+('|")(\w+[\/-]\w+)('|"),\s+\S+/
+      return $2
+    elsif mod =~ /^\s*mod\s+('|")(\w+[\/-]\w+)('|")$/
+      return $2
+    end
   end
 
   def is_depr?(ver)
@@ -109,19 +112,23 @@ class ForgeVersions
 
     if response.code == '200'
       parsed = JSON.parse(response.body)
-      m.version = parsed["current_release"]["version"]
-      m.found = true
-      m.depr = is_depr?(parsed["current_release"]["version"])
-      deps = parsed["current_release"]["metadata"]["dependencies"]
-      if deps.any? and ! m.depr
-        deps.each do |mod|
-          name = mod['name'].gsub(/\//,'-')
-          m.deps.push(name)
-          unless mod_exists?(name,data)
-            n, data = findModuleData(name, data)
-            data.push(n)
+      if parsed["current_release"] =! nil
+        m.found = true
+        m.version = parsed["current_release"]["version"]
+        m.depr = is_depr?(parsed["current_release"]["version"])
+        deps = parsed["current_release"]["metadata"]["dependencies"]
+        if deps.any? and ! m.depr
+          deps.each do |mod|
+            name = mod['name'].gsub(/\//,'-')
+            m.deps.push(name)
+            unless mod_exists?(name,data)
+              n, data = findModuleData(name, data)
+              data.push(n)
+            end
           end
         end
+      else
+        m.found = false
       end
     else
       m.found = false 
