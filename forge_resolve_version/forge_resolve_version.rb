@@ -112,7 +112,7 @@ class ForgeVersions
 
     if response.code == '200'
       parsed = JSON.parse(response.body)
-      if parsed["current_release"] =! nil
+      if parsed["current_release"] != nil
         m.found = true
         m.version = parsed["current_release"]["version"]
         m.depr = is_depr?(parsed["current_release"]["version"])
