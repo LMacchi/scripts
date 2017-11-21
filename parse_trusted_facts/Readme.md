@@ -25,6 +25,6 @@ Usage: ./parse_trusted_facts.rb
 10-32-175-18.rfc1918.puppetlabs.net
 ```
 
-Certnames: A regular expression to limit results
-Fact: A regular expression to match the name of the trusted fact
-Value: A regular expression to match the value of the trusted fact
+- Certnames: A regular expression to limit results
+- Fact: A regular expression to match the name of the trusted fact
+- Value: A regular expression to match the value of the trusted fact
