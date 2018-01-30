@@ -18,7 +18,11 @@ Puppet::Type::Node_group::ProviderHttps.instances
 # Translating IDs to names
 groups = raw['groups'].collect do |group|
   gindex = Puppet::Type::Node_group::ProviderHttps.get_name_index_from_id(group)
-  $ngs[gindex]['name']
+  if $ngs[gindex]['environment_trumps']
+    $ngs[gindex]['name'] + " (Environment Group)"
+  else
+    $ngs[gindex]['name']
+  end
 end
 
 puts groups.sort
