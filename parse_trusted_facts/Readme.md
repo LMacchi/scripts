@@ -4,7 +4,14 @@ Currently Puppet Query does not allow to query trusted facts, so I wrote
 a script to do that.
 
 ### Requirements
-Puppet-query needs to be fully set up.
+- Puppet-query needs to be fully set up.
+- Run in master as root or with sudo
+- Require the gem puppetdb-ruby
+
+```
+/opt/puppetlabs/puppet/bin/gem install puppetdb-ruby
+```
+
 
 ### Usage
 

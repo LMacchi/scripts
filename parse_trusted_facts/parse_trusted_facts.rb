@@ -1,7 +1,8 @@
 #!/opt/puppetlabs/puppet/bin/ruby
 
-require 'json'
 require 'optparse'
+require 'puppet'
+require 'puppetdb'
 
 class TrustedFact
   attr_accessor :cert, :name, :value
@@ -36,15 +37,28 @@ def parse_opts
 end
 
 def build_query
-  "/opt/puppetlabs/bin/puppet-query \'facts { name = \"trusted\" }\'"
+  "facts { name = \"trusted\" }"
 end
 
 def build_query_certs(certs)
-  "/opt/puppetlabs/bin/puppet-query \'facts { name = \"trusted\" and certname ~ \"#{certs}\" }\'"
+  "facts { name = \"trusted\" and certname ~ \"#{certs}\" }"
 end
 
 def run_query(query)
-  JSON.load `#{query}`
+  # Assumes mono server
+  Puppet.initialize_settings
+
+  client = PuppetDB::Client.new({
+    :server => "https://#{Puppet.settings[:certname]}:8081",
+    :pem    => {
+        'key'     => Puppet.settings[:hostprivkey],
+        'cert'    => Puppet.settings[:hostcert],
+        'ca_file' => Puppet.settings[:localcacert]
+    }})
+
+  response = client.request('', query)
+
+  response.data
 end
 
 def load_facts(results)
